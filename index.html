@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EN Q1 2026 — Social Content Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f8f6;color:#1a1a18;min-height:100vh}
+.page{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+h1{font-size:20px;font-weight:500;margin-bottom:4px}
+.subtitle{font-size:13px;color:#888780;margin-bottom:1.5rem}
+.tabs{display:flex;gap:0;border-bottom:1px solid #e0ddd5;margin-bottom:1.5rem;flex-wrap:wrap}
+.tab{padding:7px 14px;font-size:12px;cursor:pointer;border:none;background:transparent;color:#888780;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tab.active{color:#1a1a18;border-bottom-color:#378ADD;font-weight:500}
+.tab:hover:not(.active){color:#1a1a18}
+.panel{display:none}.panel.active{display:block}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:1rem}
+.kpi{background:#f1efe8;border-radius:8px;padding:9px 12px}
+.kpi-label{font-size:10px;color:#888780;margin-bottom:3px}
+.kpi-val{font-size:18px;font-weight:500}
+.kpi-sub{font-size:10px;color:#b4b2a9;margin-top:2px}
+.summary-box{border:1px solid #e0ddd5;border-radius:10px;padding:12px 16px;margin-bottom:1.25rem;background:#fff;font-size:13px;color:#444441;line-height:1.8;min-height:52px;white-space:pre-line}
+.summary-box.loading{color:#b4b2a9;font-style:italic}
+.sec{font-size:10px;font-weight:500;color:#888780;letter-spacing:.05em;text-transform:uppercase;margin:1.25rem 0 .6rem}
+.mtog-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.75rem}
+.mtog{font-size:11px;padding:3px 9px;border-radius:12px;border:1px solid #d3d1c7;cursor:pointer;background:transparent;color:#888780}
+.mtog.on{background:#378ADD;border-color:#378ADD;color:#fff}
+.mtog:hover:not(.on){background:#f1efe8}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px;font-size:11px;color:#888780}
+.legend span{display:flex;align-items:center;gap:4px}
+.ldot{width:9px;height:9px;border-radius:2px;display:inline-block}
+.mono-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:1.5rem}
+.mono-table th{text-align:left;padding:6px 10px;font-size:10px;font-weight:500;color:#888780;border-bottom:1px solid #e8e5dc;white-space:nowrap}
+.mono-table th.num{text-align:right}
+.mono-table td{padding:7px 10px;border-bottom:1px solid #f1efe8;color:#1a1a18;vertical-align:middle}
+.mono-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono-table tr:hover td{background:#fafaf8}
+.rpp-bar-wrap{background:#f1efe8;border-radius:3px;height:6px;width:100px;display:inline-block;vertical-align:middle}
+.rpp-bar{height:6px;border-radius:3px;background:#378ADD}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
+.badge-hi{background:#e1f5ee;color:#0f6e56}
+.badge-mid{background:#e6f1fb;color:#185fa5}
+.badge-lo{background:#f1efe8;color:#5f5e5a}
+@media(max-width:600px){.kpis{grid-template-columns:1fr 1fr}.mono-table{font-size:11px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>EN — Social Content Dashboard</h1>
+  <p class="subtitle">Q1 2026 &nbsp;|&nbsp; Isabella &nbsp;·&nbsp; Zhuri &nbsp;·&nbsp; Assets &nbsp;·&nbsp; Talent</p>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('isabella')">Isabella</button>
+    <button class="tab" onclick="showTab('zhuri')">Zhuri</button>
+    <button class="tab" onclick="showTab('assets')">Assets</button>
+    <button class="tab" onclick="showTab('talent')">Talent</button>
+    <button class="tab" onclick="showTab('compare')">Comparison</button>
+    <button class="tab" onclick="showTab('mono')">Monetization</button>
+  </div>
+  <div id="panel-isabella" class="panel active"></div>
+  <div id="panel-zhuri" class="panel"></div>
+  <div id="panel-assets" class="panel"></div>
+  <div id="panel-talent" class="panel"></div>
+  <div id="panel-compare" class="panel"></div>
+  <div id="panel-mono" class="panel"></div>
+</div>
+
+<script>
+
+
+const CR_COLORS={Isabella:'#D85A30',Zhuri:'#1D9E75',Assets:'#BA7517',Talent:'#378ADD'};
+let CH={};
+let summaryCache={};
+
+const DATA={
+  isabella:[{week:"01/01",posts:14,ig_views:273140.71,tt_views:128915.46,fb_views:139203.08,ig_vir:9.91,tt_vir:22.48,fb_vir:15.92,completion:35.08,mono:3.19},{week:"01/05",posts:27,ig_views:270011.52,tt_views:176327.04,fb_views:674608.41,ig_vir:14.27,tt_vir:32.02,fb_vir:16.93,completion:45.07,mono:105.47},{week:"01/12",posts:32,ig_views:291824.12,tt_views:119393.34,fb_views:459640.35,ig_vir:10.67,tt_vir:31.86,fb_vir:16.07,completion:33.01,mono:102.57},{week:"01/19",posts:30,ig_views:300512.23,tt_views:115050.52,fb_views:327312.21,ig_vir:8.75,tt_vir:20.57,fb_vir:11.31,completion:43.06,mono:127.61},{week:"01/26",posts:30,ig_views:345855.67,tt_views:153596.92,fb_views:665506.2,ig_vir:9.78,tt_vir:18.19,fb_vir:12.29,completion:37.81,mono:56.91},{week:"02/02",posts:30,ig_views:320659.9,tt_views:135582.62,fb_views:442379.73,ig_vir:10.58,tt_vir:22.81,fb_vir:12.26,completion:37.87,mono:78.6},{week:"02/09",posts:25,ig_views:413999.64,tt_views:195856.88,fb_views:725744.96,ig_vir:18.2,tt_vir:29.74,fb_vir:19.21,completion:31.61,mono:126.42},{week:"02/16",posts:33,ig_views:397827.33,tt_views:135031.12,fb_views:529944.82,ig_vir:15.66,tt_vir:32.54,fb_vir:18.27,completion:40.63,mono:305.07},{week:"02/23",posts:36,ig_views:376546.44,tt_views:98452.92,fb_views:921403.56,ig_vir:12.86,tt_vir:33.06,fb_vir:17.03,completion:44.3,mono:1344.16},{week:"03/02",posts:23,ig_views:448964.48,tt_views:186211.78,fb_views:606206.0,ig_vir:15.76,tt_vir:26.59,fb_vir:12.21,completion:41.39,mono:549.53},{week:"03/09",posts:31,ig_views:241480.74,tt_views:53457.77,fb_views:228736.13,ig_vir:12.13,tt_vir:23.13,fb_vir:13.44,completion:31.21,mono:378.01},{week:"03/16",posts:33,ig_views:308767.21,tt_views:79750.88,fb_views:155564.91,ig_vir:10.97,tt_vir:22.19,fb_vir:12.24,completion:25.71,mono:218.42},{week:"03/23",posts:29,ig_views:289694.0,tt_views:66054.35,fb_views:178025.76,ig_vir:12.08,tt_vir:21.63,fb_vir:11.09,completion:30.9,mono:322.03},{week:"03/30",posts:35,ig_views:257557.46,tt_views:58512.89,fb_views:307019.14,ig_vir:10.8,tt_vir:21.62,fb_vir:14.28,completion:32.33,mono:795.02}],
+  zhuri:[{week:"01/01",posts:17,ig_views:320934.24,tt_views:174110.79,fb_views:733364.2,ig_vir:14.7,tt_vir:22.85,fb_vir:18.77,completion:46.51,mono:8.24},{week:"01/05",posts:26,ig_views:350809.58,tt_views:305844.64,fb_views:2065823.08,ig_vir:12.77,tt_vir:30.9,fb_vir:15.48,completion:56.52,mono:363.27},{week:"01/12",posts:31,ig_views:374393.39,tt_views:182535.65,fb_views:921490.74,ig_vir:11.39,tt_vir:22.4,fb_vir:13.99,completion:50.7,mono:42.81},{week:"01/19",posts:30,ig_views:288943.87,tt_views:160570.36,fb_views:1270352.27,ig_vir:11.18,tt_vir:21.37,fb_vir:18.85,completion:46.35,mono:214.75},{week:"01/26",posts:35,ig_views:335899.46,tt_views:368885.0,fb_views:937789.83,ig_vir:17.24,tt_vir:41.09,fb_vir:21.72,completion:45.88,mono:386.81},{week:"02/02",posts:34,ig_views:334318.82,tt_views:83620.76,fb_views:1040413.65,ig_vir:11.71,tt_vir:23.54,fb_vir:17.41,completion:54.88,mono:321.2},{week:"02/09",posts:32,ig_views:375925.5,tt_views:78895.83,fb_views:466341.45,ig_vir:13.78,tt_vir:21.13,fb_vir:22.08,completion:45.25,mono:170.06},{week:"02/16",posts:30,ig_views:294583.27,tt_views:101854.39,fb_views:726417.31,ig_vir:23.52,tt_vir:28.92,fb_vir:15.53,completion:42.36,mono:459.9},{week:"02/23",posts:34,ig_views:261315.0,tt_views:106158.67,fb_views:770048.79,ig_vir:19.87,tt_vir:27.55,fb_vir:17.04,completion:41.0,mono:1039.75},{week:"03/02",posts:31,ig_views:353583.42,tt_views:95473.23,fb_views:701668.1,ig_vir:19.5,tt_vir:22.28,fb_vir:14.99,completion:40.3,mono:1022.69},{week:"03/09",posts:30,ig_views:273311.07,tt_views:53327.69,fb_views:800812.66,ig_vir:22.08,tt_vir:25.91,fb_vir:16.69,completion:43.79,mono:1187.24},{week:"03/16",posts:30,ig_views:331742.93,tt_views:79266.53,fb_views:635528.1,ig_vir:16.65,tt_vir:24.64,fb_vir:16.07,completion:40.22,mono:763.98},{week:"03/23",posts:29,ig_views:485025.03,tt_views:133122.41,fb_views:873205.59,ig_vir:25.49,tt_vir:27.33,fb_vir:14.33,completion:40.83,mono:918.81},{week:"03/30",posts:26,ig_views:261944.08,tt_views:57911.85,fb_views:899654.81,ig_vir:13.12,tt_vir:28.41,fb_vir:14.44,completion:45.27,mono:517.51}],
+  assets:[{week:"01/01",posts:4,ig_views:234447.5,tt_views:64766.5,fb_views:73357.5,ig_vir:11.6,tt_vir:24.01,fb_vir:16.47,completion:17.22,mono:0.23},{week:"01/05",posts:11,ig_views:209155.0,tt_views:57091.55,fb_views:246370.73,ig_vir:14.48,tt_vir:25.22,fb_vir:12.04,completion:25.79,mono:1.22},{week:"01/12",posts:11,ig_views:183136.36,tt_views:76808.89,fb_views:164816.6,ig_vir:16.17,tt_vir:20.84,fb_vir:18.6,completion:21.82,mono:8.72},{week:"01/19",posts:12,ig_views:267767.25,tt_views:74615.62,fb_views:90354.33,ig_vir:15.58,tt_vir:26.67,fb_vir:17.91,completion:21.06,mono:1.47},{week:"01/26",posts:14,ig_views:356303.36,tt_views:102202.45,fb_views:404775.83,ig_vir:16.38,tt_vir:22.29,fb_vir:16.52,completion:20.32,mono:53.95},{week:"02/02",posts:16,ig_views:216053.62,tt_views:69414.64,fb_views:71062.36,ig_vir:16.38,tt_vir:28.1,fb_vir:15.8,completion:16.79,mono:13.14},{week:"02/09",posts:22,ig_views:257361.64,tt_views:55866.14,fb_views:180107.35,ig_vir:15.46,tt_vir:27.34,fb_vir:14.87,completion:24.83,mono:10.81},{week:"02/16",posts:18,ig_views:316378.5,tt_views:46233.72,fb_views:225242.67,ig_vir:16.82,tt_vir:32.99,fb_vir:15.7,completion:25.18,mono:79.19},{week:"02/23",posts:13,ig_views:265816.0,tt_views:130569.55,fb_views:138424.45,ig_vir:20.58,tt_vir:35.75,fb_vir:18.57,completion:29.29,mono:107.79},{week:"03/02",posts:19,ig_views:232402.79,tt_views:173666.83,fb_views:213786.68,ig_vir:15.87,tt_vir:25.63,fb_vir:18.84,completion:26.04,mono:242.72},{week:"03/09",posts:13,ig_views:238337.0,tt_views:41138.54,fb_views:207503.62,ig_vir:13.15,tt_vir:17.21,fb_vir:17.77,completion:23.72,mono:167.74},{week:"03/16",posts:13,ig_views:254714.08,tt_views:55880.67,fb_views:366489.38,ig_vir:14.6,tt_vir:20.09,fb_vir:16.27,completion:30.37,mono:352.91},{week:"03/23",posts:13,ig_views:307785.38,tt_views:55946.27,fb_views:210361.85,ig_vir:20.2,tt_vir:23.08,fb_vir:14.26,completion:23.22,mono:295.15},{week:"03/30",posts:12,ig_views:209501.17,tt_views:29564.17,fb_views:60475.75,ig_vir:16.24,tt_vir:21.3,fb_vir:16.31,completion:20.5,mono:58.07}],
+  talent:[{week:"01/01",posts:14,ig_views:406003.86,tt_views:258734.21,fb_views:171333.5,ig_vir:9.75,tt_vir:29.76,fb_vir:22.91,completion:32.97,mono:21.44},{week:"01/05",posts:32,ig_views:186756.62,tt_views:84056.9,fb_views:195139.16,ig_vir:17.06,tt_vir:22.55,fb_vir:12.53,completion:17.66,mono:105.82},{week:"01/12",posts:12,ig_views:216006.67,tt_views:44753.25,fb_views:67680.5,ig_vir:5.88,tt_vir:14.26,fb_vir:7.59,completion:13.26,mono:0.67},{week:"01/19",posts:10,ig_views:214480.7,tt_views:99017.33,fb_views:119045.8,ig_vir:13.41,tt_vir:35.94,fb_vir:23.67,completion:25.99,mono:19.41},{week:"01/26",posts:6,ig_views:198378.33,tt_views:71920.67,fb_views:230959.17,ig_vir:13.14,tt_vir:33.9,fb_vir:36.54,completion:36.79,mono:23.18},{week:"02/02",posts:6,ig_views:173037.17,tt_views:39535.67,fb_views:251291.83,ig_vir:10.21,tt_vir:21.52,fb_vir:24.86,completion:45.51,mono:22.15},{week:"02/09",posts:4,ig_views:229947.0,tt_views:48344.75,fb_views:86615.0,ig_vir:17.5,tt_vir:58.31,fb_vir:40.8,completion:27.06,mono:4.23},{week:"02/16",posts:2,ig_views:138275.0,tt_views:21003.0,fb_views:39691.0,ig_vir:6.7,tt_vir:18.86,fb_vir:17.46,completion:16.82,mono:0.28},{week:"02/23",posts:3,ig_views:157272.33,tt_views:33503.5,fb_views:57990.0,ig_vir:15.79,tt_vir:38.92,fb_vir:26.68,completion:10.54,mono:9.13},{week:"03/02",posts:7,ig_views:217807.57,tt_views:89985.57,fb_views:400630.14,ig_vir:24.57,tt_vir:62.41,fb_vir:16.28,completion:34.71,mono:110.46},{week:"03/09",posts:10,ig_views:312642.2,tt_views:65067.2,fb_views:190193.44,ig_vir:25.69,tt_vir:47.56,fb_vir:19.4,completion:38.85,mono:138.32},{week:"03/16",posts:6,ig_views:244697.17,tt_views:50158.17,fb_views:98960.33,ig_vir:20.54,tt_vir:70.14,fb_vir:18.11,completion:26.04,mono:28.12},{week:"03/23",posts:9,ig_views:215661.56,tt_views:30335.33,fb_views:67947.78,ig_vir:13.26,tt_vir:17.37,fb_vir:19.53,completion:23.93,mono:40.78},{week:"03/30",posts:7,ig_views:167594.57,tt_views:35275.33,fb_views:225254.71,ig_vir:13.02,tt_vir:33.85,fb_vir:21.57,completion:40.5,mono:116.43}],
+};
+
+const WEEKS=DATA.isabella.map(r=>r.week);
+
+// Category data: total monetization, post count, revenue per post
+const CAT_DATA=[
+  {cat:'Teaser - after',mono:7140.21,posts:357,rpp:20.00},
+  {cat:'BTS',mono:1567.18,posts:122,rpp:12.24},
+  {cat:'Teaser - before',mono:985.23,posts:29,rpp:33.97},
+  {cat:'Episode',mono:862.31,posts:63,rpp:13.69},
+  {cat:'Stills - after',mono:474.95,posts:59,rpp:8.05},
+  {cat:'Trend - anytime',mono:271.19,posts:27,rpp:10.04},
+  {cat:'Trend - after',mono:248.10,posts:34,rpp:7.30},
+  {cat:'ReelTalk',mono:221.88,posts:48,rpp:4.62},
+  {cat:'Mashup - after',mono:217.25,posts:24,rpp:9.05},
+  {cat:'Branding',mono:175.59,posts:83,rpp:2.12},
+  {cat:'Trailer',mono:173.19,posts:40,rpp:4.33},
+  {cat:'Routine Content',mono:142.37,posts:12,rpp:11.86},
+  {cat:'Artist - Greeting',mono:122.57,posts:13,rpp:9.43},
+  {cat:'Stills - before',mono:113.06,posts:28,rpp:4.04},
+  {cat:'Poster',mono:101.99,posts:12,rpp:8.50},
+  {cat:'Trend - before',mono:77.97,posts:14,rpp:5.57},
+  {cat:'Artist - attractive',mono:40.19,posts:10,rpp:4.02},
+  {cat:'Meme - anytime',mono:33.59,posts:21,rpp:1.60},
+  {cat:'Artist - Interview',mono:23.11,posts:11,rpp:2.10},
+  {cat:'Game',mono:22.96,posts:9,rpp:2.55},
+  {cat:'Purchased Show',mono:13.70,posts:5,rpp:2.74},
+  {cat:'Collab',mono:3.05,posts:30,rpp:0.10},
+];
+
+const MONO_WEEKLY=[
+  {week:'01/01',vals:[0,0,0,0,0,0,0,0,0.25,0,0.11,0,0,0,0.16,0,0,0.96,0,0,0,0]},
+  {week:'01/05',vals:[0,104.63,18.2,0,0,0,0,0,0,0,0.02,0,0,0,0,2.05,0,9.88,1.4,0,0,0]},
+  {week:'01/12',vals:[0.36,16.12,5.39,0,0,0,0.37,0,0,0,0,0,0,0.39,0.04,1.74,0,2.87,2.19,0,0,0]},
+  {week:'01/19',vals:[6.88,119.2,5.19,0,0,0,0.19,0,0,0.15,0,0,0,0.08,0,0,0,0.05,0,0,0,0]},
+  {week:'01/26',vals:[0,48.71,0.47,0,0,0,0.03,0,0,0,0,0,13.31,0.35,0,0,0,40.25,0.15,0,0,0]},
+  {week:'02/02',vals:[0.76,6.06,2.77,0,0,0,0.34,0,0,0,0,0,4.08,0.41,0.01,13.79,0,2.25,0.72,0,0,0]},
+  {week:'02/09',vals:[15.86,34.04,0,0,0,0,0.13,0,0,63.07,0,0,0,0.29,0.01,0,2.33,0,1.08,0,0,0]},
+  {week:'02/16',vals:[59.91,31.58,0,0,0,0,31.15,0,0,72.76,0,0,0,1.2,0,0,0,120.26,3.45,0,0,0]},
+  {week:'02/23',vals:[0,336.1,0,0,0,0,226.72,0,0,41.73,0,0,2.08,8.65,25.09,0,0,10.84,12.35,0,0,0]},
+  {week:'03/02',vals:[2.08,222.19,218.22,614.65,0,0,66.76,0,0,0,0,0,0,41.23,32.62,0,0,0,31.48,0,0,0]},
+  {week:'03/09',vals:[16.15,161.65,429.05,1187.64,0,0,75.19,0,0,25.96,0,0,0,30.53,4.79,9.13,0,0,55.02,0,0,0]},
+  {week:'03/16',vals:[7.36,92.37,305.94,2200.65,0,0,0,0,0,4.95,0,0,0,29.93,35.95,46.05,0,60.74,48.84,0,0,0]},
+  {week:'03/23',vals:[9.33,248.12,0,1345.26,0,0,73.94,0,0,8.37,0,0,0,0,3.32,0,3.86,0,7.35,0,0,0]},
+  {week:'03/30',vals:[19.65,101.91,0,2044.71,0,0,73.18,0,0,72.12,0,0,44.72,34.65,0,5.21,0,120.6,21.33,0,0,0]},
+];
+
+const METRICS=[
+  {key:'ig_views',label:'IG avg views',fmt:fmtK},
+  {key:'tt_views',label:'TT avg views',fmt:fmtK},
+  {key:'fb_views',label:'FB avg views',fmt:fmtK},
+  {key:'ig_vir',label:'IG virality',fmt:v=>v.toFixed(1)},
+  {key:'tt_vir',label:'TT virality',fmt:v=>v.toFixed(1)},
+  {key:'fb_vir',label:'FB virality',fmt:v=>v.toFixed(1)},
+  {key:'completion',label:'FB completion %',fmt:v=>v.toFixed(1)+'%'},
+  {key:'mono',label:'FB monetization $',fmt:v=>'$'+v.toFixed(0)},
+];
+
+function fmtK(v){if(!v&&v!==0)return'—';const a=Math.abs(v);if(a>=1e6)return(v/1e6).toFixed(1)+'M';if(a>=1000)return(v/1000).toFixed(0)+'K';return v.toFixed(0);}
+function avg(arr){const f=arr.filter(v=>v>0);return f.length?f.reduce((a,b)=>a+b,0)/f.length:0;}
+function sum(arr){return arr.reduce((a,b)=>a+b,0);}
+function maxWeek(rows,key){return rows.reduce((a,b)=>b[key]>a[key]?b:a);}
+function kpis(cards){return`<div class="kpis">${cards.map(c=>`<div class="kpi"><div class="kpi-label">${c.l}</div><div class="kpi-val">${c.v}</div><div class="kpi-sub">${c.s||''}</div></div>`).join('')}</div>`;}
+
+const STATIC_SUMMARIES = {
+  "sum-panel-isabella": `• Q1 共发文 408 篇，FB 总收益 $4,513，收益高度集中在后半季——后 7 周合计 $3,912，是前 7 周（$601）的 6.5 倍。
+• FB 平均 Views 达 454K，远高于 IG（324K）和 TT（122K），是三平台中表现最强的，平均完播率 36.4%。
+• 收益峰值出现在 02/23 单周 $1,344，3 月后维持高位，显示内容变现能力在 Q1 末期持续提升。`,
+  "sum-panel-zhuri": `• Q1 共发文 415 篇，FB 总收益 $7,417，是四位 Creator 中收益最高的，后 7 周合计 $5,910，占全季收益 80%。
+• FB 平均 Views 高达 917K，完播率 45.7%，均为四人中最高，显示 Zhuri 的内容在 FB 端留存能力最强。
+• IG 峰值出现在 03/23 周（485K views），TT 在 01/26 周有明显爆发（368K），平台表现较均衡。`,
+  "sum-panel-assets": `• Q1 共发文 191 篇，FB 总收益 $1,393，发文量约为 Isabella/Zhuri 的一半，但 3 月后收益快速拉升，后 7 周合计 $1,304，占全季 94%。
+• FB 平均完播率仅 23.3%，是四人中最低，IG 平均 Views 254K，整体指标偏保守。
+• 收益峰值在 03/16 单周 $353，建议重点分析该周内容类型，找出可复制的爆款规律。`,
+  "sum-panel-talent": `• Q1 共发文 128 篇，为四人中最少，FB 总收益 $640，每周发文量波动大（最低 2 篇，最高 32 篇），数据代表性受限。
+• IG 在 01/01 周达到峰值 406K views，但此后整体下滑，FB 完播率平均 27.9%，高于 Assets 但低于 Isabella 和 Zhuri。
+• 收益在 3 月后有明显改善（03/02 $110、03/09 $138），建议在发文量稳定后再评估真实的内容效率。`,
+  "sum-compare": `• Zhuri 综合表现最强：发文 415 篇，收益 $7,417，FB 完播率 45.7%，三项指标均居四人之首。
+• Isabella 收益 $4,513 排第二，但后半季爆发明显，02/23 单周 $1,344 是全季单周最高纪录，增长势头最猛。
+• Assets 和 Talent 收益差距较大（$1,393 vs $640），两者完播率均偏低（23.3% / 27.9%），建议优先提升发文频率与 FB 内容质量。`,
+  "sum-mono": `• Teaser - after 以 $7,140 总收益主导全季变现，占所有类型总收益约 61%，但每篇收益 $20.00 属中等水平，主要靠 357 篇的庞大发文量支撑。
+• Teaser - before 每篇收益 $33.97，是所有类型中最高，仅用 29 篇即产生 $985 收益，变现效率最优，值得加大发文比重。
+• Collab 发文 30 篇但每篇仅 $0.10，BTS 以 122 篇产出 $1,567（每篇 $12.24），两者对比鲜明——高频内容的效率差异决定资源投入方向。`,
+};
+
+async function fetchSummary(prompt,boxId){
+  const box=document.getElementById(boxId);
+  if(!box)return;
+  const text=STATIC_SUMMARIES[boxId]||"";
+  box.textContent=text;
+  box.classList.remove("loading");
+}
+function buildCreator(pid,name,rows,color){
+  const el=document.getElementById(pid);
+  const totalPosts=sum(rows.map(r=>r.posts));
+  const totalMono=sum(rows.map(r=>r.mono));
+  const avgIG=avg(rows.map(r=>r.ig_views));
+  const avgTT=avg(rows.map(r=>r.tt_views));
+  const avgComp=avg(rows.map(r=>r.completion));
+  const peakMono=maxWeek(rows,'mono');
+  const peakIG=maxWeek(rows,'ig_views');
+  const prompt=`Creator: ${name}, Q1 2026:\n- Total posts: ${totalPosts}, Total FB revenue: $${totalMono.toFixed(0)}\n- IG avg views: ${fmtK(avgIG)}, TT avg views: ${fmtK(avgTT)}, FB completion rate: ${avgComp.toFixed(1)}%\n- Peak revenue week: ${peakMono.week} ($${peakMono.mono.toFixed(0)}), Peak IG week: ${peakIG.week} (${fmtK(peakIG.ig_views)})\n- Weekly monetization: ${rows.map(r=>'$'+r.mono.toFixed(0)).join(', ')}\nAnalyze Q1 performance highlights, platform strengths, and revenue trends.`;
+  el.innerHTML=`
+    ${kpis([{l:'Q1 total posts',v:totalPosts,s:'all weeks'},{l:'IG avg views',v:fmtK(avgIG),s:'active weeks avg'},{l:'TT avg views',v:fmtK(avgTT),s:'active weeks avg'},{l:'FB completion rate',v:avgComp.toFixed(1)+'%',s:'FB avg'},{l:'Q1 monetization',v:'$'+totalMono.toFixed(0),s:'FB total'}])}
+    <div class="summary-box loading" id="sum-${pid}">正在生成分析小结...</div>
+    <div class="mtog-row" id="mtog-${pid}"></div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px;font-size:11px;color:#888780">
+      <span style="display:inline-block;width:12px;height:2px;background:${color}"></span>${name}
+      <span style="display:inline-block;width:12px;height:1.5px;background:#ccc"></span>post count (right axis)
+    </div>
+    <div style="position:relative;height:260px"><canvas id="c-${pid}-main"></canvas></div>`;
+  const el2=document.getElementById(`mtog-${pid}`);
+  el2.innerHTML=METRICS.map(m=>`<button class="mtog${m.key==='ig_views'?' on':''}" data-key="${m.key}">${m.label}</button>`).join('');
+  el2.addEventListener('click',e=>{
+    const b=e.target.closest('.mtog');if(!b)return;
+    el2.querySelectorAll('.mtog').forEach(x=>{x.classList.remove('on');x.style.cssText='';});
+    b.classList.add('on');b.style.background='#378ADD';b.style.borderColor='#378ADD';b.style.color='#fff';
+    renderCreatorMain(pid,name,rows,color,b.dataset.key);
+  });
+  renderCreatorMain(pid,name,rows,color,'ig_views');
+  fetchSummary(prompt,`sum-${pid}`);
+}
+
+function renderCreatorMain(pid,name,rows,color,key){
+  const def=METRICS.find(m=>m.key===key);
+  const cid=`c-${pid}-main`;if(CH[cid])CH[cid].destroy();
+  CH[cid]=new Chart(document.getElementById(cid),{type:'line',
+    data:{labels:WEEKS,datasets:[
+      {label:name,data:rows.map(r=>r[key]),borderColor:color,backgroundColor:color+'18',tension:0.3,pointRadius:4,borderWidth:2,yAxisID:'y',fill:true},
+      {label:'Posts',data:rows.map(r=>r.posts),borderColor:'#ccc',borderDash:[4,3],backgroundColor:'transparent',tension:0.3,pointRadius:3,borderWidth:1.5,yAxisID:'y2'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.datasetIndex===0?def.fmt(ctx.parsed.y):ctx.parsed.y+' posts')}}},
+      scales:{x:{ticks:{font:{size:10},maxRotation:45,autoSkip:false}},y:{ticks:{font:{size:10},callback:v=>def.fmt(v)},title:{display:true,text:def.label,font:{size:9},color:'#888'}},y2:{position:'right',ticks:{font:{size:10}},grid:{drawOnChartArea:false},title:{display:true,text:'posts',font:{size:9},color:'#ccc'}}}}
+  });
+}
+
+function buildCompare(){
+  const el=document.getElementById('panel-compare');
+  const cmpData={};
+  Object.keys(DATA).forEach(cr=>{cmpData[cr]={};METRICS.forEach(m=>{cmpData[cr][m.key]=DATA[cr].map(r=>r[m.key]);});});
+  const posts=DATA.isabella.map((_,i)=>sum(Object.values(DATA).map(d=>d[i]?d[i].posts:0)));
+  const prompt=`Q1 2026 four-creator comparison:\nIsabella: ${sum(DATA.isabella.map(r=>r.posts))} posts, $${sum(DATA.isabella.map(r=>r.mono)).toFixed(0)}, IG avg ${fmtK(avg(DATA.isabella.map(r=>r.ig_views)))}, completion ${avg(DATA.isabella.map(r=>r.completion)).toFixed(1)}%\nZhuri: ${sum(DATA.zhuri.map(r=>r.posts))} posts, $${sum(DATA.zhuri.map(r=>r.mono)).toFixed(0)}, IG avg ${fmtK(avg(DATA.zhuri.map(r=>r.ig_views)))}, completion ${avg(DATA.zhuri.map(r=>r.completion)).toFixed(1)}%\nAssets: ${sum(DATA.assets.map(r=>r.posts))} posts, $${sum(DATA.assets.map(r=>r.mono)).toFixed(0)}, IG avg ${fmtK(avg(DATA.assets.map(r=>r.ig_views)))}, completion ${avg(DATA.assets.map(r=>r.completion)).toFixed(1)}%\nTalent: ${sum(DATA.talent.map(r=>r.posts))} posts, $${sum(DATA.talent.map(r=>r.mono)).toFixed(0)}, IG avg ${fmtK(avg(DATA.talent.map(r=>r.ig_views)))}, completion ${avg(DATA.talent.map(r=>r.completion)).toFixed(1)}%\nCompare performance differences and each creator's strengths.`;
+  el.innerHTML=`
+    <div class="summary-box loading" id="sum-compare">正在生成分析小结...</div>
+    <div class="legend" style="margin-bottom:.75rem">
+      ${Object.entries(CR_COLORS).map(([cr,c])=>`<span><span class="ldot" style="background:${c}"></span>${cr}</span>`).join('')}
+      <span style="font-size:11px;color:#b4b2a9">— post count (right axis)</span>
+    </div>
+    <div class="mtog-row" id="mtog-compare"></div>
+    <div style="position:relative;height:280px;margin-bottom:1.5rem"><canvas id="c-cmp-main"></canvas></div>
+    <div class="sec">Weekly post count</div>
+    <div style="position:relative;height:180px"><canvas id="c-cmp-posts"></canvas></div>`;
+  const el2=document.getElementById('mtog-compare');
+  el2.innerHTML=METRICS.map(m=>`<button class="mtog${m.key==='ig_views'?' on':''}" data-key="${m.key}">${m.label}</button>`).join('');
+  el2.addEventListener('click',e=>{
+    const b=e.target.closest('.mtog');if(!b)return;
+    el2.querySelectorAll('.mtog').forEach(x=>{x.classList.remove('on');x.style.cssText='';});
+    b.classList.add('on');b.style.background='#378ADD';b.style.borderColor='#378ADD';b.style.color='#fff';
+    renderCmpMain(b.dataset.key,cmpData,posts);
+  });
+  renderCmpMain('ig_views',cmpData,posts);
+  renderCmpPosts(posts);
+  fetchSummary(prompt,'sum-compare');
+}
+
+function renderCmpMain(key,cmpData,posts){
+  const def=METRICS.find(m=>m.key===key);
+  const cid='c-cmp-main';if(CH[cid])CH[cid].destroy();
+  const DASHES={Isabella:[],Zhuri:[6,3],Assets:[2,4],Talent:[8,2,2,2]};
+  CH[cid]=new Chart(document.getElementById(cid),{type:'line',
+    data:{labels:WEEKS,datasets:[
+      ...Object.entries(CR_COLORS).map(([cr,c])=>({label:cr,data:cmpData[cr.toLowerCase()][key],borderColor:c,backgroundColor:'transparent',tension:0.3,pointRadius:3,borderWidth:2,borderDash:DASHES[cr],yAxisID:'y'})),
+      {label:'Total posts',data:posts,borderColor:'#ccc',borderDash:[3,3],backgroundColor:'transparent',tension:0.3,pointRadius:2,borderWidth:1,yAxisID:'y2'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.datasetIndex<4?def.fmt(ctx.parsed.y):ctx.parsed.y+' posts'}`}}},
+      scales:{x:{ticks:{font:{size:10},maxRotation:45,autoSkip:false}},y:{ticks:{font:{size:10},callback:v=>def.fmt(v)},title:{display:true,text:def.label,font:{size:9},color:'#888'}},y2:{position:'right',ticks:{font:{size:10}},grid:{drawOnChartArea:false},title:{display:true,text:'posts',font:{size:9},color:'#ccc'}}}}
+  });
+}
+
+function renderCmpPosts(posts){
+  const cid='c-cmp-posts';if(CH[cid])CH[cid].destroy();
+  CH[cid]=new Chart(document.getElementById(cid),{type:'bar',
+    data:{labels:WEEKS,datasets:Object.entries(CR_COLORS).map(([cr,c])=>({label:cr,data:DATA[cr.toLowerCase()].map(r=>r.posts),backgroundColor:c+'88',borderColor:c,borderWidth:1,stack:'s'}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:8,padding:8}}},
+      scales:{x:{stacked:true,ticks:{font:{size:10},maxRotation:45,autoSkip:false}},y:{stacked:true,ticks:{font:{size:10}}}}}
+  });
+}
+
+function buildMono(){
+  const el=document.getElementById('panel-mono');
+  const totalAll=sum(CAT_DATA.map(c=>c.mono));
+  const maxRpp=Math.max(...CAT_DATA.map(c=>c.rpp));
+  const sortedByMono=[...CAT_DATA].sort((a,b)=>b.mono-a.mono);
+  const top8ByMono=sortedByMono.slice(0,8);
+
+  const prompt=`Q1 2026 FB Monetization by content category:\nTop 5 by total revenue: ${sortedByMono.slice(0,5).map(c=>`${c.cat} ($${c.mono.toFixed(0)}, ${c.posts} posts, $${c.rpp.toFixed(2)}/post)`).join(', ')}\nTop 5 by revenue per post: ${[...CAT_DATA].sort((a,b)=>b.rpp-a.rpp).slice(0,5).map(c=>`${c.cat} ($${c.rpp.toFixed(2)}/post)`).join(', ')}\nTotal Q1 monetization: $${totalAll.toFixed(0)}\nAnalyze which content types deliver the most monetization value and highlight the difference between total revenue and revenue efficiency per post.`;
+
+  const tableRows=sortedByMono.map((c,i)=>{
+    const rppPct=Math.round(c.rpp/maxRpp*100);
+    const badge=c.rpp>=20?'<span class="badge badge-hi">high</span>':c.rpp>=8?'<span class="badge badge-mid">mid</span>':'<span class="badge badge-lo">low</span>';
+    return`<tr>
+      <td>${i+1}</td>
+      <td style="font-weight:500">${c.cat}</td>
+      <td class="num">${c.posts}</td>
+      <td class="num">$${c.mono.toFixed(0)}</td>
+      <td class="num">$${c.rpp.toFixed(2)}</td>
+      <td><div class="rpp-bar-wrap"><div class="rpp-bar" style="width:${rppPct}%"></div></div></td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML=`
+    ${kpis([
+      {l:'Q1 total monetization',v:'$'+totalAll.toFixed(0),s:'all categories'},
+      {l:'highest total — Teaser after',v:'$7,140',s:'357 posts'},
+      {l:'best rev/post — Teaser before',v:'$33.97',s:'29 posts'},
+      {l:'2nd best rev/post — BTS',v:'$12.24',s:'122 posts'},
+      {l:'categories tracked',v:CAT_DATA.length,s:'content types'},
+    ])}
+    <div class="summary-box loading" id="sum-mono">正在生成分析小结...</div>
+    <div class="sec">Revenue per post by category (sorted by total revenue)</div>
+    <div style="overflow-x:auto;margin-bottom:1.5rem">
+      <table class="mono-table">
+        <thead><tr>
+          <th>#</th><th>Category</th>
+          <th class="num">Posts</th>
+          <th class="num">Total revenue ($)</th>
+          <th class="num">Rev / post ($)</th>
+          <th>Efficiency</th>
+          <th>Tier</th>
+        </tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+    <div class="sec">Weekly revenue — top 8 categories (stacked)</div>
+    <div style="position:relative;height:320px"><canvas id="c-mono-stack"></canvas></div>`;
+
+  const CAT_COLORS=['#7F77DD','#1D9E75','#D85A30','#BA7517','#378ADD','#993556','#639922','#E24B4A'];
+  const cid='c-mono-stack';if(CH[cid])CH[cid].destroy();
+  CH[cid]=new Chart(document.getElementById(cid),{type:'bar',
+    data:{labels:MONO_WEEKLY.map(r=>r.week),datasets:top8ByMono.map((c,i)=>({
+      label:c.cat,
+      data:MONO_WEEKLY.map(r=>r.vals[CAT_DATA.indexOf(c)]||0),
+      backgroundColor:CAT_COLORS[i]+'cc',borderColor:CAT_COLORS[i],borderWidth:1,stack:'s',
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:8,padding:6}}},
+      scales:{x:{stacked:true,ticks:{font:{size:10},maxRotation:45,autoSkip:false}},y:{stacked:true,ticks:{font:{size:10},callback:v=>'$'+v.toFixed(0)}}}}
+  });
+  fetchSummary(prompt,'sum-mono');
+}
+
+function showTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`[onclick="showTab('${id}')"]`).classList.add('active');
+  document.getElementById('panel-'+id).classList.add('active');
+}
+
+buildCreator('panel-isabella','Isabella',DATA.isabella,CR_COLORS.Isabella);
+buildCreator('panel-zhuri','Zhuri',DATA.zhuri,CR_COLORS.Zhuri);
+buildCreator('panel-assets','Assets',DATA.assets,CR_COLORS.Assets);
+buildCreator('panel-talent','Talent',DATA.talent,CR_COLORS.Talent);
+buildCompare();
+buildMono();
+</script>
+</body>
+</html>
