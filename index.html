@@ -143,14 +143,14 @@ function maxWeek(rows,key){return rows.reduce((a,b)=>b[key]>a[key]?b:a);}
 function kpis(cards){return`<div class="kpis">${cards.map(c=>`<div class="kpi"><div class="kpi-label">${c.l}</div><div class="kpi-val">${c.v}</div><div class="kpi-sub">${c.s||''}</div></div>`).join('')}</div>`;}
 
 const STATIC_SUMMARIES = {
-  "sum-panel-isabella": `• Q1 共发文 408 篇，FB 总收益 $4,513，收益高度集中在后半季——后 7 周合计 $3,912，是前 7 周（$601）的 6.5 倍。
+  "sum-panel-isabella": `• Q1 共发文 408 篇，FB 总收益 $4,513，收益高度集中在后半季，后 7 周合计 $3,912，是前 7 周（$601）的 6.5 倍。
 • FB 平均 Views 达 454K，远高于 IG（324K）和 TT（122K），是三平台中表现最强的，平均完播率 36.4%。
 • 收益峰值出现在 02/23 单周 $1,344，3 月后维持高位，显示内容变现能力在 Q1 末期持续提升。`,
   "sum-panel-zhuri": `• Q1 共发文 415 篇，FB 总收益 $7,417，是四位 Creator 中收益最高的，后 7 周合计 $5,910，占全季收益 80%。
 • FB 平均 Views 高达 917K，完播率 45.7%，均为四人中最高，显示 Zhuri 的内容在 FB 端留存能力最强。
 • IG 峰值出现在 03/23 周（485K views），TT 在 01/26 周有明显爆发（368K），平台表现较均衡。`,
   "sum-panel-assets": `• Q1 共发文 191 篇，FB 总收益 $1,393，发文量约为 Isabella/Zhuri 的一半，但 3 月后收益快速拉升，后 7 周合计 $1,304，占全季 94%。
-• FB 平均完播率仅 23.3%，是四人中最低，IG 平均 Views 254K，整体指标偏保守。
+• FB 平均完播率仅 23.3%，是最低的，IG 平均 Views 254K，整体指标偏保守。
 • 收益峰值在 03/16 单周 $353，建议重点分析该周内容类型，找出可复制的爆款规律。`,
   "sum-panel-talent": `• Q1 共发文 128 篇，为四人中最少，FB 总收益 $640，每周发文量波动大（最低 2 篇，最高 32 篇），数据代表性受限。
 • IG 在 01/01 周达到峰值 406K views，但此后整体下滑，FB 完播率平均 27.9%，高于 Assets 但低于 Isabella 和 Zhuri。
@@ -161,7 +161,7 @@ const STATIC_SUMMARIES = {
   "sum-mono": `• （註：content monetization 2/22才开启）
 • Teaser - after 以 $7,140 总收益主导全季变现，占所有类型总收益约 61%，但每篇收益 $20.00 属中等水平，主要靠 357 篇的庞大发文量支撑。
 • Teaser - before 每篇收益 $33.97，是所有类型中最高，仅用 29 篇即产生 $985 收益，变现效率最优，值得加大发文比重。
-• Collab 发文 30 篇但每篇仅 $0.10，BTS 以 122 篇产出 $1,567（每篇 $12.24），两者对比鲜明——高频内容的效率差异决定资源投入方向。`,
+• Collab 发文 30 篇但每篇仅 $0.10，BTS 以 122 篇产出 $1,567（每篇 $12.24），两者对比鲜明，高频内容的效率差异决定资源投入方向。`,
 };
 
 async function fetchSummary(prompt,boxId){
